@@ -338,7 +338,6 @@ jobs:
          # remove existing logging config (if avaiable on deconfig)
          sed -i '/CONFIG_SCHEDSTATS/d' "$CONFIG_FILE"
          sed -i '/CONFIG_PM_DEBUG/d' "$CONFIG_FILE"
-         sed -i '/CONFIG_IPC_LOGGING/d' "$CONFIG_FILE"
          sed -i '/CONFIG_KASAN/d' "$CONFIG_FILE"
          sed -i '/CONFIG_KASAN_HW/d' "$CONFIG_FILE"
          sed -i '/CONFIG_UBSAN/d' "$CONFIG_FILE"
@@ -349,7 +348,6 @@ jobs:
          # disable logging dkk aowkoakow  
          echo "# CONFIG_SCHEDSTATS is not set" >> "$CONFIG_FILE"
          echo "# CONFIG_PM_DEBUG is not set" >> "$CONFIG_FILE"
-         echo "# CONFIG_IPC_LOGGING is not set" >> "$CONFIG_FILE"
          echo "# CONFIG_KASAN is not set" >> "$CONFIG_FILE"
          echo "# CONFIG_KASAN_HW_TAGS is not set" >> "$CONFIG_FILE"
          echo "# CONFIG_UBSAN is not set" >> "$CONFIG_FILE"
