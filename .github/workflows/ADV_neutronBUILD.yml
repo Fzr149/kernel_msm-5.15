@@ -339,7 +339,7 @@ jobs:
          sed -i '/CONFIG_SCHEDSTATS/d' "$CONFIG_FILE"
          sed -i '/CONFIG_PM_DEBUG/d' "$CONFIG_FILE"
          sed -i '/CONFIG_KASAN/d' "$CONFIG_FILE"
-         sed -i '/CONFIG_KASAN_HW/d' "$CONFIG_FILE"
+         sed -i '/CONFIG_KASAN_HW_TAGS/d' "$CONFIG_FILE"
          sed -i '/CONFIG_UBSAN/d' "$CONFIG_FILE"
          sed -i '/CONFIG_PAGE_OWNER/d' "$CONFIG_FILE"
          sed -i '/CONFIG_PAGE_PINNER/d' "$CONFIG_FILE"
