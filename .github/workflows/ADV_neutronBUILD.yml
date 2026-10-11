@@ -1,4 +1,4 @@
-name: "ADV NeutronBuild"
+name: "ADV NeutronBuild NOKSU"
 
 env:
   OUT_DIR: "out"
@@ -28,46 +28,11 @@ on:
         required: false
         type: string
         default: ""
-      buildKSU:
-        description: "Build KSU variant?"
-        required: true
-        type: choice
-        default: "noksu"
-        options:
-          - "noksu"
-          - "ksu"
-          - "both"
-      ksuVariant:
-        description: "KSU implementation (if KSU enabled)"
-        required: true
-        type: choice
-        default: "ReSukiSU"
-        options:
-          - "KowSU"
-          - "SukiSU"
-          - "BakaSU"
-          - "KSU-Next"
-      susfsSupport:
-        description: "Add SUSFS Implementation (if KSU Enabled)"
-        required: true
-        type: choice
-        default: "Disabled"
-        options:
-          - "Enabled"
-          - "Disabled"
-      NoMountSupport:
-        description: "Implement NoMount integration via kernel-side(if KSU Enabled)"
-        required: false
-        type: choice
-        default: "no"
-        options:
-          - "yes"
-          - "no"
       tickRate:
         description: "Kernel tick rate (Hz)"
         required: true
         type: choice
-        default: "250Hz"
+        default: "100Hz"
         options:
           - "default"
           - "100Hz"
@@ -77,15 +42,6 @@ on:
           - "600Hz"
           - "750Hz"
           - "1000Hz"
-      extraGovernor:
-        description: "Add Extra Governor Options"
-        required: false
-        type: choice
-        default: "none"
-        options:
-          - "reflex"
-          - "reflex + vorpal"
-          - "none"
       optimizationLevel:
         description: "Compiler optimization level"
         required: true
@@ -136,6 +92,18 @@ jobs:
           echo "BUILD_TIME=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
           sudo apt-get update -qq
           sudo apt-get install -y repo rsync aria2 build-essential bc curl flex cpio rsync git zip dwarves libelf-dev gcc-aarch64-linux-gnu libssl-dev python3 clang lld llvm llvm-dev
+
+
+      - name : "Installing CPUPOWER & Set max performance for compiling karnel
+        run: |
+        sudo apt install cpupower -y
+        sudo cpupower frequency-set -g performance
+
+
+     - name : "Makesure the ubuntu / linux host already set to performanace gevernor
+     run: |
+     cpupower frequency-info
+        
 
       - name: "🌟 Clone kernel source"
         working-directory: ./${{ env.kernelDir }}
@@ -263,10 +231,10 @@ jobs:
           echo "⚙️ Using Clang version:"
           "$CLANG_PATH/clang" --version
           
-      - name: 📐 Setup SWAP 25GB
+      - name: 📐 Setup SWAP 32GB
         uses: pierotofy/set-swap-space@master
         with:
-            swap-size-gb: 25
+            swap-size-gb: 32
             
       - name: 📐 Tune Swap
         run: |
@@ -333,27 +301,6 @@ jobs:
          echo "CONFIG_TMPFS_XATTR=y" >> "$CONFIG_FILE"
          echo "CONFIG_TMPFS_POSIX_ACL=y" >> "$CONFIG_FILE"
          echo "CONFIG_OVERLAY_FS=y" >> "$CONFIG_FILE"
-
-
-         # remove existing logging config (if avaiable on deconfig)
-         sed -i '/CONFIG_SCHEDSTATS/d' "$CONFIG_FILE"
-         sed -i '/CONFIG_PM_DEBUG/d' "$CONFIG_FILE"
-         sed -i '/CONFIG_KASAN/d' "$CONFIG_FILE"
-         sed -i '/CONFIG_KASAN_HW_TAGS/d' "$CONFIG_FILE"
-         sed -i '/CONFIG_UBSAN/d' "$CONFIG_FILE"
-         sed -i '/CONFIG_PAGE_OWNER/d' "$CONFIG_FILE"
-         sed -i '/CONFIG_PAGE_PINNER/d' "$CONFIG_FILE"
-         sed -i '/CONFIG_KFENCE/d' "$CONFIG_FILE"
-         
-         # disable logging dkk aowkoakow  
-         echo "# CONFIG_SCHEDSTATS is not set" >> "$CONFIG_FILE"
-         echo "# CONFIG_PM_DEBUG is not set" >> "$CONFIG_FILE"
-         echo "# CONFIG_KASAN is not set" >> "$CONFIG_FILE"
-         echo "# CONFIG_KASAN_HW_TAGS is not set" >> "$CONFIG_FILE"
-         echo "# CONFIG_UBSAN is not set" >> "$CONFIG_FILE"
-         echo "# CONFIG_PAGE_OWNER is not set" >> "$CONFIG_FILE"
-         echo "# CONFIG_PAGE_PINNER is not set" >> "$CONFIG_FILE"
-         echo "# CONFIG_KFENCE is not set" >> "$CONFIG_FILE"
          
           
          # Remove existing optimization configs
