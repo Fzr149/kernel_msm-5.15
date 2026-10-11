@@ -68,7 +68,6 @@ on:
         options:
           - "thin"
           - "full"
-
 jobs:
   Build-Kernel:
     name: "🚀 Build Kernel"
