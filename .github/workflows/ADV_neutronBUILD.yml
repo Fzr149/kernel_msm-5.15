@@ -98,11 +98,10 @@ jobs:
          sudo apt install cpupower -y
          sudo cpupower frequency-set -g performance
          
-     - name : "Makesure the ubuntu / linux host already set to performanace gevernor"
-     run: |
-      cpupower frequency-info
+      - name : "Makesure the ubuntu / linux host already set to performanace gevernor"
+        run: |
+         cpupower frequency-info
         
-
       - name: "🌟 Clone kernel source"
         working-directory: ./${{ env.kernelDir }}
         run: |
