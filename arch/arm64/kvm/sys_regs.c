@@ -109,7 +109,7 @@ static bool access_dcsw(struct kvm_vcpu *vcpu,
 	return true;
 }
 
-static void get_access_mask(const struct sys_reg_desc *r, u64 *mask, u64 *shift)
+static void get_access_mask(const struct sys_reg_desc *r,  *mask, u64 *shift)
 {
 	switch (r->aarch32_map) {
 	case AA32_LO:
@@ -2816,7 +2816,7 @@ void kvm_sys_reg_table_init(void)
 	 */
 	u64 clidr = 0;  // Initialize the variable
     get_clidr_el1(NULL, &clidr); /* Ugly... */
-	cache_levels = clidr.val;
+	cache_levels = clidr;
 	for (i = 0; i < 7; i++)
 		if (((cache_levels >> (i*3)) & 7) == 0)
 			break;
