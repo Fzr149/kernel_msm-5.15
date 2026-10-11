@@ -1,4 +1,4 @@
-name: "Advanced NeutronClang Combo Build"
+name: "NeutronClang NOKSU Basic"
 
 env:
   OUT_DIR: "out"
