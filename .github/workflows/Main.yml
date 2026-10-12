@@ -1,0 +1,125 @@
+name: Build Kernel 5.15
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel_repo:
+        description: "Kernel source repo URL (example: https://github.com/user/repo)"
+        required: true
+        type: string
+      kernel_branch:
+        description: "Branch (leave empty = repo default branch)"
+        required: false
+        type: string
+      defconfig:
+        description: "Defconfig name (located in arch/arm64/configs/)"
+        required: true
+        default: "gki_defconfig"
+        type: string
+      disable_btf:
+        description: "Disable DEBUG_INFO_BTF (workaround for the BTFIDS error)"
+        required: true
+        default: true
+        type: boolean
+      anykernel_repo:
+        description: "(Optional) AnyKernel3 template repo URL to build a flashable zip. Empty = Image only"
+        required: false
+        type: string
+      anykernel_branch:
+        description: "AnyKernel3 branch (leave empty = default branch)"
+        required: false
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      ARCH: arm64
+      LLVM: "1"
+      LLVM_IAS: "1"
+      CROSS_COMPILE: aarch64-linux-gnu-
+      CROSS_COMPILE_COMPAT: arm-linux-gnueabi-
+      KBUILD_BUILD_USER: github
+      KBUILD_BUILD_HOST: actions
+
+    steps:
+      - name: Free up runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bc bison flex build-essential libssl-dev libelf-dev \
+            cpio lz4 zstd xz-utils zip unzip git python3 dwarves \
+            clang-14 lld-14 llvm-14 \
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+          echo "/usr/lib/llvm-14/bin" >> "$GITHUB_PATH"
+
+      - name: Clone kernel source
+        env:
+          KERNEL_REPO: ${{ inputs.kernel_repo }}
+          KERNEL_BRANCH: ${{ inputs.kernel_branch }}
+        run: |
+          git clone --depth=1 ${KERNEL_BRANCH:+-b "$KERNEL_BRANCH"} "$KERNEL_REPO" kernel
+          git -C kernel log -1 --oneline
+
+      - name: Generate config
+        working-directory: kernel
+        env:
+          DEFCONFIG: ${{ inputs.defconfig }}
+        run: |
+          make O=out "$DEFCONFIG"
+
+      - name: Disable BTF
+        if: ${{ inputs.disable_btf }}
+        working-directory: kernel
+        run: |
+          scripts/config --file out/.config -d DEBUG_INFO_BTF -d DEBUG_INFO_BTF_MODULES
+          make O=out olddefconfig
+          grep -E '^(# )?CONFIG_DEBUG_INFO_BTF' out/.config || true
+
+      - name: Build
+        working-directory: kernel
+        run: |
+          make -j"$(nproc --all)" O=out Image 2>&1 | tee ../build.log
+
+      - name: Check output
+        run: |
+          ls -lh kernel/out/arch/arm64/boot/Image
+          mkdir result
+          cp kernel/out/arch/arm64/boot/Image result/
+
+      - name: Package AnyKernel3 zip
+        if: ${{ inputs.anykernel_repo != '' }}
+        env:
+          AK_REPO: ${{ inputs.anykernel_repo }}
+          AK_BRANCH: ${{ inputs.anykernel_branch }}
+        run: |
+          git clone --depth=1 ${AK_BRANCH:+-b "$AK_BRANCH"} "$AK_REPO" ak3
+          cp kernel/out/arch/arm64/boot/Image ak3/Image
+          cd ak3
+          zip -r9 "$GITHUB_WORKSPACE/result/Kernel-AK3.zip" . -x ".git*"
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-result
+          path: result/*
+
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
+          
