@@ -32,7 +32,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 120
 
     defaults:
@@ -63,6 +63,16 @@ jobs:
             clang-14 lld-14 llvm-14 \
             gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
           echo "/usr/lib/llvm-14/bin" >> "$GITHUB_PATH"
+
+        - name: Setup SWAP 24GB
+         uses: pierotofy/set-swap-space@master
+         with:
+             swap-size-gb: 24
+            
+        - name: Tune Swap
+          run: |
+              echo "vm.swappiness=80" | sudo tee -a /etc/sysctl.conf
+              sudo sysctl -p
 
       - name: Clone kernel source
         env:
