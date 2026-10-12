@@ -218,7 +218,7 @@ jobs:
     
          # Remove any existing LTO FULL configuration
          sed -i '/^CONFIG_LTO_CLANG_FULL/d' "$CONFIG_FILE"
-    
+
          # Set localversion
          if [ -n "${{ github.event.inputs.localVersion }}" ]; then
           echo "CONFIG_LOCALVERSION=\"${{ github.event.inputs.localVersion }}\"" >> "$CONFIG_FILE"
