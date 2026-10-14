@@ -6,10 +6,12 @@ on:
       kernel_repo:
         description: "Kernel source repo URL (example: https://github.com/user/repo)"
         required: true
+        default: https://github.com/Fzr149/kernel_msm-5.15
         type: string
       kernel_branch:
-        description: "Branch (leave empty = repo default branch)"
+        description: "Branch"
         required: false
+        default: google
         type: string
       defconfig:
         description: "Defconfig name (located in arch/arm64/configs/)"
