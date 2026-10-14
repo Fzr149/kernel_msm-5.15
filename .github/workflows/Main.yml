@@ -16,11 +16,6 @@ on:
         required: true
         default: "gki_defconfig"
         type: string
-      disable_btf:
-        description: "Disable DEBUG_INFO_BTF (workaround for the BTFIDS error)"
-        required: true
-        default: true
-        type: boolean
       anykernel_repo:
         description: "(Optional) AnyKernel3 template repo URL to build a flashable zip. Empty = Image only"
         required: false
@@ -65,10 +60,10 @@ jobs:
           echo "/usr/lib/llvm-14/bin" >> "$GITHUB_PATH"
 
         
-      - name: Setup SWAP 24GB
+      - name: Setup SWAP 32GB
         uses: pierotofy/set-swap-space@master
         with:
-             swap-size-gb: 24
+             swap-size-gb: 32
             
       - name: Tune Swap
         run: |
@@ -90,14 +85,13 @@ jobs:
         run: |
           make O=out "$DEFCONFIG"
 
-      - name: Disable BTF
-        if: ${{ inputs.disable_btf }}
+      - name: THIN LTO
         working-directory: kernel
         run: |
-          scripts/config --file out/.config -d DEBUG_INFO_BTF -d DEBUG_INFO_BTF_MODULES
+          scripts/config --file out/.config -d LTO_NONE -d LTO_CLANG_FULL -e LTO_CLANG_THIN
           make O=out olddefconfig
-          grep -E '^(# )?CONFIG_DEBUG_INFO_BTF' out/.config || true
-
+          grep -x "CONFIG_LTO_CLANG_THIN=y" out/.config
+      
       - name: Build
         working-directory: kernel
         run: |
