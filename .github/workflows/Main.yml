@@ -18,21 +18,6 @@ on:
         required: true
         default: "gki_defconfig"
         type: string
-      localversion:
-        description: "Kernel name suffix (CONFIG_LOCALVERSION), example: -oplus"
-        required: false
-        default: "-oplus"
-        type: string
-      hz:
-        description: "Tick rate (CONFIG_HZ)"
-        required: true
-        default: "300"
-        type: choice
-        options:
-          - "100"
-          - "250"
-          - "300"
-          - "1000"
       anykernel_repo:
         description: "(Optional) AnyKernel3 template repo URL to build a flashable zip. Empty = Image only"
         required: false
@@ -44,7 +29,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 120
 
     defaults:
@@ -72,15 +57,9 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             bc bison flex build-essential libssl-dev libelf-dev \
             cpio lz4 zstd xz-utils zip unzip git python3 dwarves \
-            clang lld llvm \
+            clang-21 lld-21 llvm-21 \
             gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
-          clang --version | head -n 1
-
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: kernel-5.15
-          max-size: 3G
+          echo "/usr/lib/llvm-21/bin" >> "$GITHUB_PATH"
 
       - name: Setup SWAP 32GB
         uses: pierotofy/set-swap-space@master
@@ -100,56 +79,24 @@ jobs:
           git clone --depth=1 ${KERNEL_BRANCH:+-b "$KERNEL_BRANCH"} "$KERNEL_REPO" kernel
           git -C kernel log -1 --oneline
 
-      - name: Configure kernel
+      - name: Generate config
         working-directory: kernel
         env:
           DEFCONFIG: ${{ inputs.defconfig }}
-          LOCALVERSION: ${{ inputs.localversion }}
-          HZ: ${{ inputs.hz }}
         run: |
           make O=out "$DEFCONFIG"
 
-          # pilihan dalam satu "choice" harus dimatiin semua dulu, baru nyalain yang dipilih
-          for h in 100 250 300 1000; do
-            scripts/config --file out/.config -d "HZ_$h"
-          done
-
-          scripts/config --file out/.config \
-            -d LTO_NONE -d LTO_CLANG_FULL -e LTO_CLANG_THIN \
-            -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_SIZE \
-            -e CC_OPTIMIZE_FOR_PERFORMANCE_O3 \
-            -e WQ_POWER_EFFICIENT_DEFAULT \
-            -e "HZ_$HZ" \
-            -d LOCALVERSION_AUTO \
-            --set-str LOCALVERSION "$LOCALVERSION"
-
+      - name: THIN LTO
+        working-directory: kernel
+        run: |
+          scripts/config --file out/.config -d LTO_NONE -d LTO_CLANG_FULL -e LTO_CLANG_THIN
           make O=out olddefconfig
-
-          # cek semua opsi beneran kepasang, kalau nggak langsung gagal (sebelum build lama)
-          for c in \
-            "CONFIG_LTO_CLANG_THIN=y" \
-            "CONFIG_WQ_POWER_EFFICIENT_DEFAULT=y" \
-            "CONFIG_HZ_$HZ=y" \
-            "CONFIG_HZ=$HZ" \
-            "CONFIG_LOCALVERSION=\"$LOCALVERSION\""; do
-            grep -Fqx "$c" out/.config || { echo "::error::Gagal kepasang: $c"; exit 1; }
-          done
-
-          # O3: kalau symbol-nya nggak ada di source, pakai -O3 lewat KCFLAGS sebagai gantinya
-          if grep -qx "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3=y" out/.config; then
-            echo "KCFLAGS=-Wno-error" >> "$GITHUB_ENV"
-          else
-            echo "::warning::Symbol O3 nggak ada di source ini, -O3 dipasang lewat KCFLAGS"
-            echo "KCFLAGS=-O3 -Wno-error" >> "$GITHUB_ENV"
-          fi
-
-          make O=out -s kernelrelease
+          grep -x "CONFIG_LTO_CLANG_THIN=y" out/.config
 
       - name: Build
         working-directory: kernel
         run: |
-          make -j"$(nproc)" O=out CC="ccache clang" Image 2>&1 | tee ../build.log
-          ccache -s
+          make -j"$(nproc --all)" O=out Image 2>&1 | tee ../build.log
 
       - name: Check output
         run: |
