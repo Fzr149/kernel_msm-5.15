@@ -89,10 +89,9 @@ jobs:
       - name: THIN LTO
         working-directory: kernel
         run: |
-          scripts/config --file out/.config -d LTO_NONE -d LTO_CLANG_FULL -e LTO_CLANG_THIN -d INIT_ON_ALLOC_DEFAULT_ON
+          scripts/config --file out/.config -d LTO_NONE -d LTO_CLANG_FULL -e LTO_CLANG_THIN
           make O=out olddefconfig
           grep -x "CONFIG_LTO_CLANG_THIN=y" out/.config
-          grep -x "# CONFIG_INIT_ON_ALLOC_DEFAULT_ON is not set" out/.config
 
       - name: Build
         working-directory: kernel
@@ -128,5 +127,4 @@ jobs:
         with:
           name: build-log
           path: build.log
-          if-no-files-found: ignore
-          
+          if-no-files-found: ignore        
